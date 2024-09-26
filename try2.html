@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vidwan's Secret Sharing Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        #result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Vidwan's Secret Sharing Calculator</h1>
+    <input type="file" id="fileInput" accept=".json">
+    <div id="result"></div>
+
+    <script>
+        function decodeValue(base, value) {
+            return parseInt(value, parseInt(base));
+        }
+
+        function lagrangeInterpolation(points) {
+            const secret = points.reduce((result, [xi, yi], i) => {
+                let li = points.reduce((product, [xj, _], j) => {
+                    if (i !== j) {
+                        product *= xj / (xj - xi);
+                    }
+                    return product;
+                }, 1);
+                return result + yi * li;
+            }, 0);
+
+            return Math.round(secret);
+        }
+
+        function findSecret(jsonData) {
+            const { keys, ...points } = JSON.parse(jsonData);
+            const { k } = keys;
+
+            const decodedPoints = Object.entries(points)
+                .map(([x, { base, value }]) => [parseInt(x), decodeValue(base, value)])
+                .slice(0, k);
+
+            return lagrangeInterpolation(decodedPoints);
+        }
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) {
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const contents = e.target.result;
+                try {
+                    const secret = findSecret(contents);
+                    document.getElementById('result').textContent = `The secret (constant term 'c') is: ${secret}`;
+                } catch (error) {
+                    document.getElementById('result').textContent = `Error: ${error.message}`;
+                }
+            };
+            reader.readAsText(file);
+        });
+    </script>
+</body>
+</html>
